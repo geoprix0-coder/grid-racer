@@ -86,6 +86,23 @@ function update(dt){
  if(newRadial>1.22||newRadial<.78){player.vx*=Math.pow(.94,t);player.vy*=Math.pow(.94,t);player.speed=Math.hypot(player.vx,player.vy)/2}
  player.x=clamp(player.x,-20,W+20);player.y=clamp(player.y,-20,H+20);
  bots.forEach(b=>b.phase+=b.speed*.0019*dt);
+ // Colisão simples: o carro do jogador não atravessa os adversários.
+ bots.forEach(b=>{
+  const opponent=trackPoint(b.phase,b.lane);
+  let dx=player.x-opponent.x,dy=player.y-opponent.y;
+  let distance=Math.hypot(dx,dy);
+  const contactDistance=25;
+  if(distance<contactDistance){
+   if(distance<.01){dx=1;dy=0;distance=1}
+   const nx=dx/distance,ny=dy/distance;
+   const overlap=contactDistance-distance;
+   player.x+=nx*(overlap+1);
+   player.y+=ny*(overlap+1);
+   player.vx=player.vx*.78+nx*.55;
+   player.vy=player.vy*.78+ny*.55;
+   player.speed=Math.hypot(player.vx,player.vy)/2;
+  }
+ });
  const p=progressAt(player.x,player.y);
  if(lastProgress>6.05&&p<.22&&newRadial>.82&&newRadial<1.18&&player.speed>1.1){
   lap++;
