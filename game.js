@@ -1,6 +1,6 @@
 (()=>{
 const canvas=document.getElementById('game'),ctx=canvas.getContext('2d');
-const W=960,H=600,cx=480,cy=300,rx=330,ry=205,road=76,keys={};
+const W=960,H=600,cx=480,cy=300,rx=330,ry=205,road=112,keys={};
 let running=false,finished=false,last=0,lap=1,lastProgress=0,position=4;
 const player={x:cx,y:cy-ry+road*.12,angle:0,speed:0,vx:0,vy:0,color:'#f3b72f'};
 const bots=[{phase:-Math.PI/2+.10,lane:-16,speed:1.52,color:'#e84d4d'},{phase:-Math.PI/2+.25,lane:14,speed:1.46,color:'#47a5ed'},{phase:-Math.PI/2+.40,lane:0,speed:1.40,color:'#b78be8'}];
