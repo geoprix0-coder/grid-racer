@@ -5,18 +5,50 @@ let running=false,finished=false,last=0,lap=1,lastProgress=0,position=4;
 const player={x:cx,y:cy-ry+road*.30,angle:0,speed:0,vx:0,vy:0,color:'#f3b72f'};
 const bots=[{phase:-Math.PI/2+.10,lane:-16,speed:1.52,color:'#e84d4d'},{phase:-Math.PI/2+.25,lane:14,speed:1.46,color:'#47a5ed'},{phase:-Math.PI/2+.40,lane:0,speed:1.40,color:'#b78be8'}];
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
-const trackPoint=(a,l=0)=>({x:cx+(rx+l)*Math.cos(a),y:cy+(ry+l*.62)*Math.sin(a)});
+// Pista tipo autódromo: duas retas longas e curvas largas.
+const trackPoint=(a,l=0)=>({
+ x:cx+(rx+l)*Math.sign(Math.cos(a))*Math.sqrt(Math.abs(Math.cos(a))),
+ y:cy+(ry+l*.62)*Math.sign(Math.sin(a))*Math.sqrt(Math.abs(Math.sin(a)))
+});
+function traceTrack(aRadius,bRadius){
+ ctx.beginPath();
+ for(let i=0;i<=240;i++){
+  const a=-Math.PI/2+i/240*Math.PI*2;
+  const x=cx+aRadius*Math.sign(Math.cos(a))*Math.sqrt(Math.abs(Math.cos(a)));
+  const y=cy+bRadius*Math.sign(Math.sin(a))*Math.sqrt(Math.abs(Math.sin(a)));
+  if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y)
+ }
+ ctx.closePath()
+}
+function trackRadius(x,y){
+ return Math.pow(Math.pow(Math.abs((x-cx)/rx),4)+Math.pow(Math.abs((y-cy)/ry),4),.25)
+}
 function progressAt(x,y){const a=Math.atan2((y-cy)/ry,(x-cx)/rx);return(a+Math.PI/2+Math.PI*2)%(Math.PI*2)}
 function drawTrack(){
- ctx.fillStyle='#286044';ctx.fillRect(0,0,W,H);ctx.globalAlpha=.12;ctx.strokeStyle='#9ac49b';ctx.lineWidth=2;
- for(let x=-80;x<W+100;x+=34){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x+130,H);ctx.stroke()}ctx.globalAlpha=1;
- ctx.beginPath();ctx.ellipse(cx,cy,rx+road/2,ry+road/2,0,0,Math.PI*2);ctx.fillStyle='#555b5d';ctx.fill();
- ctx.beginPath();ctx.ellipse(cx,cy,rx-road/2,ry-road/2,0,0,Math.PI*2);ctx.fillStyle='#286044';ctx.fill();
- ctx.lineWidth=4;ctx.strokeStyle='#e6e7df';ctx.beginPath();ctx.ellipse(cx,cy,rx+road/2,ry+road/2,0,0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.ellipse(cx,cy,rx-road/2,ry-road/2,0,0,Math.PI*2);ctx.stroke();
- for(let a=0;a<Math.PI*2;a+=.075){const p=trackPoint(a,road/2-2),q=trackPoint(a+.045,road/2-2);ctx.strokeStyle=(Math.floor(a/.075)%2)?'#f4f4ee':'#e74c3c';ctx.lineWidth=7;ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.stroke();const p2=trackPoint(a,-road/2+2),q2=trackPoint(a+.045,-road/2+2);ctx.beginPath();ctx.moveTo(p2.x,p2.y);ctx.lineTo(q2.x,q2.y);ctx.stroke()}
- ctx.setLineDash([15,17]);ctx.strokeStyle='#d7d9d1';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(cx,cy,rx,ry,0,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);
- const sx=cx,sy=cy-ry-road/2;for(let i=0;i<8;i++)for(let j=0;j<2;j++){ctx.fillStyle=(i+j)%2?'#111':'#fff';ctx.fillRect(sx-9+j*9,sy+i*5,9,5)}
- ctx.fillStyle='#ffffffa8';ctx.font='bold 13px system-ui';ctx.fillText('SENTIDO DA CORRIDA',cx+125,cy-ry-5)
+ ctx.fillStyle='#286044';ctx.fillRect(0,0,W,H);
+ ctx.globalAlpha=.12;ctx.strokeStyle='#9ac49b';ctx.lineWidth=2;
+ for(let x=-80;x<W+100;x+=34){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x+130,H);ctx.stroke()}
+ ctx.globalAlpha=1;
+ traceTrack(rx+road/2,ry+road*.31);ctx.fillStyle='#555b5d';ctx.fill();
+ traceTrack(rx-road/2,ry-road*.31);ctx.fillStyle='#286044';ctx.fill();
+ ctx.lineWidth=4;ctx.strokeStyle='#e6e7df';
+ traceTrack(rx+road/2,ry+road*.31);ctx.stroke();
+ traceTrack(rx-road/2,ry-road*.31);ctx.stroke();
+ for(let a=0;a<Math.PI*2;a+=.045){
+  const p=trackPoint(a,road/2-2),q=trackPoint(a+.025,road/2-2);
+  ctx.strokeStyle=(Math.floor(a/.045)%2)?'#f4f4ee':'#e74c3c';ctx.lineWidth=7;
+  ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.stroke();
+  const p2=trackPoint(a,-road/2+2),q2=trackPoint(a+.025,-road/2+2);
+  ctx.beginPath();ctx.moveTo(p2.x,p2.y);ctx.lineTo(q2.x,q2.y);ctx.stroke()
+ }
+ ctx.setLineDash([15,17]);ctx.strokeStyle='#d7d9d1';ctx.lineWidth=2;
+ traceTrack(rx,ry);ctx.stroke();ctx.setLineDash([]);
+ const sx=cx,sy=cy-ry-road*.31;
+ for(let i=0;i<8;i++)for(let j=0;j<2;j++){
+  ctx.fillStyle=(i+j)%2?'#111':'#fff';ctx.fillRect(sx-9+j*9,sy+i*5,9,5)
+ }
+ ctx.fillStyle='#ffffffa8';ctx.font='bold 13px system-ui';
+ ctx.fillText('SENTIDO DA CORRIDA',cx+125,cy-ry-5)
 }
 function drawCar(x,y,a,color,isPlayer=false){
  ctx.save();ctx.translate(x,y);ctx.rotate(a+Math.PI/2);ctx.fillStyle='#0006';ctx.beginPath();ctx.roundRect(-13,-19,29,44,7);ctx.fill();
@@ -38,7 +70,7 @@ function update(dt){
  let lateral=-player.vx*Math.sin(player.angle)+player.vy*Math.cos(player.angle);
  if(throttle)forward+=.055*t;
  if(brake)forward=Math.max(0,forward-.14*t);
- const radial=Math.sqrt(((player.x-cx)/rx)**2+((player.y-cy)/ry)**2);
+ const radial=trackRadius(player.x,player.y);
  const onTrack=radial>=.82&&radial<=1.18;
  lateral*=Math.pow(onTrack?.72:.88,t);
  forward*=Math.pow(onTrack?.998:.94,t);
@@ -50,7 +82,7 @@ function update(dt){
  if(magnitude>maxSpeed){vx*=maxSpeed/magnitude;vy*=maxSpeed/magnitude}
  player.vx=vx;player.vy=vy;player.speed=Math.hypot(vx,vy)/2;
  player.x+=player.vx*t;player.y+=player.vy*t;
- const newRadial=Math.sqrt(((player.x-cx)/rx)**2+((player.y-cy)/ry)**2);
+ const newRadial=trackRadius(player.x,player.y);
  if(newRadial>1.22||newRadial<.78){player.vx*=Math.pow(.88,t);player.vy*=Math.pow(.88,t);player.speed=Math.hypot(player.vx,player.vy)/2}
  player.x=clamp(player.x,-20,W+20);player.y=clamp(player.y,-20,H+20);
  bots.forEach(b=>b.phase+=b.speed*.0019*dt);
