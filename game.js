@@ -2,7 +2,7 @@
 const canvas=document.getElementById('game'),ctx=canvas.getContext('2d');
 const W=960,H=600,cx=480,cy=300,rx=330,ry=205,road=76,keys={};
 let running=false,finished=false,last=0,lap=1,lastProgress=0,position=4;
-const player={x:cx,y:cy-ry+road*.30,angle:0,speed:0,vx:0,vy:0,color:'#f3b72f'};
+const player={x:cx,y:cy-ry+road*.12,angle:0,speed:0,vx:0,vy:0,color:'#f3b72f'};
 const bots=[{phase:-Math.PI/2+.10,lane:-16,speed:1.52,color:'#e84d4d'},{phase:-Math.PI/2+.25,lane:14,speed:1.46,color:'#47a5ed'},{phase:-Math.PI/2+.40,lane:0,speed:1.40,color:'#b78be8'}];
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 // Pista tipo autódromo: duas retas longas e curvas largas.
@@ -100,7 +100,7 @@ function update(dt){
 }
 function frame(ts){if(!running)return;if(!last)last=ts;const dt=ts-last;last=ts;update(dt);draw();if(running)requestAnimationFrame(frame)}
 function showOverlay(title,msg){document.getElementById('modalTitle').textContent=title;document.getElementById('modalText').textContent=msg;document.getElementById('start').textContent=finished?'CORRER NOVAMENTE':title==='Corrida pausada'?'CONTINUAR':'INICIAR CORRIDA';document.getElementById('overlay').style.display='flex'}
-function reset(){player.x=cx;player.y=cy-ry+road*.30;player.angle=0;player.speed=0;player.vx=0;player.vy=0;bots[0].phase=-Math.PI/2+.10;bots[1].phase=-Math.PI/2+.25;bots[2].phase=-Math.PI/2+.40;lap=1;lastProgress=0;position=4;finished=false;document.getElementById('lap').textContent='1';document.getElementById('position').textContent='4';document.getElementById('speed').textContent='0'}
+function reset(){player.x=cx;player.y=cy-ry+road*.12;player.angle=0;player.speed=0;player.vx=0;player.vy=0;bots[0].phase=-Math.PI/2+.10;bots[1].phase=-Math.PI/2+.25;bots[2].phase=-Math.PI/2+.40;lap=1;lastProgress=0;position=4;finished=false;document.getElementById('lap').textContent='1';document.getElementById('position').textContent='4';document.getElementById('speed').textContent='0'}
 document.getElementById('start').addEventListener('click',()=>{if(finished)reset();running=true;last=0;document.getElementById('overlay').style.display='none';requestAnimationFrame(frame)});
 window.addEventListener('keydown',e=>{if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key))e.preventDefault();keys[e.key]=true;if(e.key==='Escape'&&running){running=false;showOverlay('Corrida pausada','Quando estiver pronto, retome a corrida.')}});
 window.addEventListener('keyup',e=>keys[e.key]=false);draw()
