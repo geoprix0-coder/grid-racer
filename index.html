@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#101820"><title>Grid Racer — Protótipo 0.1</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+<header><h1>GRID RACER <span style="color:#f0b429">/</span> PROTÓTIPO 0.1</h1><span class="tag">ARCADE · VISTA SUPERIOR</span></header>
+<main class="game">
+<canvas id="game" width="960" height="600" aria-label="Jogo de corrida visto de cima"></canvas>
+<div class="hud">
+<div class="panel"><div class="k">Velocidade</div><div class="v"><span id="speed">0</span> <small style="font-size:11px">km/h</small></div></div>
+<div class="panel right"><div class="k">Volta</div><div class="v"><span id="lap">1</span>/3</div></div>
+<div class="panel right"><div class="k">Posição</div><div class="v"><span id="position">4</span>/4</div></div>
+</div>
+<div class="overlay" id="overlay"><div class="modal"><div style="font-size:36px;margin-bottom:6px">🏁</div><h2 id="modalTitle">Pronto para acelerar?</h2><p id="modalText">Assuma o volante, dispute com 3 adversários e complete 3 voltas. Use as setas ou WASD.</p><button id="start">INICIAR CORRIDA</button></div></div>
+</main>
+<div class="below"><div class="help"><b>↑ / W</b> acelerar · <b>↓ / S</b> frear · <b>← → / A D</b> virar<br><b>ESC</b> pausar · Complete três voltas para receber a bandeirada.</div><div class="status">Protótipo jogável local · sem instalação</div></div>
+</div>
+<script src="game.js"></script>
+</body></html>
