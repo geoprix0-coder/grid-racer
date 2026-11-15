@@ -34,7 +34,7 @@ function nearestTrack(x,y){
   const before=rawTrackPoint(a-.004),after=rawTrackPoint(a+.004);
   const dx=after.x-before.x,dy=after.y-before.y,len=Math.hypot(dx,dy)||1;
   const vx=x-p.x,vy=y-p.y,distance=Math.hypot(vx,vy);
-  if(distance<best.distance)best={distance,phase:(a+Math.PI*2)%(Math.PI*2),side:(dx*vy-dy*vx)/len}
+  if(distance<best.distance)best={distance,phase:(a+Math.PI/2+Math.PI*2)%(Math.PI*2),side:(dx*vy-dy*vx)/len}
  }
  return best
 }
