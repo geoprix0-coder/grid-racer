@@ -25,36 +25,63 @@ function trackRadius(x,y){
 }
 function progressAt(x,y){const a=Math.atan2((y-cy)/ry,(x-cx)/rx);return(a+Math.PI/2+Math.PI*2)%(Math.PI*2)}
 function drawTrack(){
- ctx.fillStyle='#286044';ctx.fillRect(0,0,W,H);
- ctx.globalAlpha=.12;ctx.strokeStyle='#9ac49b';ctx.lineWidth=2;
+ // Área externa e escape de pista.
+ ctx.fillStyle='#24563b';ctx.fillRect(0,0,W,H);
+ ctx.globalAlpha=.13;ctx.strokeStyle='#a5c98c';ctx.lineWidth=2;
  for(let x=-80;x<W+100;x+=34){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x+130,H);ctx.stroke()}
  ctx.globalAlpha=1;
- traceTrack(rx+road/2,ry+road*.31);ctx.fillStyle='#555b5d';ctx.fill();
- traceTrack(rx-road/2,ry-road*.31);ctx.fillStyle='#286044';ctx.fill();
- ctx.lineWidth=4;ctx.strokeStyle='#e6e7df';
+ traceTrack(rx+road/2+24,ry+road*.31+15);ctx.fillStyle='#8b8d83';ctx.fill();
+ traceTrack(rx+road/2+8,ry+road*.31+5);ctx.fillStyle='#d8d5c8';ctx.fill();
+ // Asfalto com contornos limpos.
+ traceTrack(rx+road/2,ry+road*.31);ctx.fillStyle='#454b50';ctx.fill();
+ traceTrack(rx-road/2,ry-road*.31);ctx.fillStyle='#24563b';ctx.fill();
+ const asphalt=ctx.createLinearGradient(0,70,0,530);
+ asphalt.addColorStop(0,'#555b60');asphalt.addColorStop(.5,'#41474c');asphalt.addColorStop(1,'#555b60');
+ traceTrack(rx+road/2,ry+road*.31);ctx.fillStyle=asphalt;ctx.fill();
+ // Bordas e zebras alternadas.
+ ctx.lineWidth=3;ctx.strokeStyle='#f4f1e8';
  traceTrack(rx+road/2,ry+road*.31);ctx.stroke();
  traceTrack(rx-road/2,ry-road*.31);ctx.stroke();
  for(let a=0;a<Math.PI*2;a+=.045){
   const p=trackPoint(a,road/2-2),q=trackPoint(a+.025,road/2-2);
-  ctx.strokeStyle=(Math.floor(a/.045)%2)?'#f4f4ee':'#e74c3c';ctx.lineWidth=7;
+  ctx.strokeStyle=(Math.floor(a/.045)%2)?'#f4f4ee':'#e34b40';ctx.lineWidth=8;
   ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.stroke();
   const p2=trackPoint(a,-road/2+2),q2=trackPoint(a+.025,-road/2+2);
   ctx.beginPath();ctx.moveTo(p2.x,p2.y);ctx.lineTo(q2.x,q2.y);ctx.stroke()
  }
- ctx.setLineDash([15,17]);ctx.strokeStyle='#d7d9d1';ctx.lineWidth=2;
+ // Linha tracejada central e linha de largada.
+ ctx.setLineDash([17,19]);ctx.strokeStyle='#d9d9d2';ctx.lineWidth=2;
  traceTrack(rx,ry);ctx.stroke();ctx.setLineDash([]);
  const sx=cx,sy=cy-ry-road*.31;
  for(let i=0;i<8;i++)for(let j=0;j<2;j++){
-  ctx.fillStyle=(i+j)%2?'#111':'#fff';ctx.fillRect(sx-9+j*9,sy+i*5,9,5)
+  ctx.fillStyle=(i+j)%2?'#151719':'#f6f6ef';ctx.fillRect(sx-9+j*9,sy+i*5,9,5)
  }
- ctx.fillStyle='#ffffffa8';ctx.font='bold 13px system-ui';
- ctx.fillText('SENTIDO DA CORRIDA',cx+125,cy-ry-5)
+ ctx.fillStyle='#ffffffb8';ctx.font='800 12px system-ui';ctx.fillText('GRID RACE CIRCUIT',cx+125,cy-ry-9);
 }
 function drawCar(x,y,a,color,isPlayer=false){
- ctx.save();ctx.translate(x,y);ctx.rotate(a+Math.PI/2);ctx.scale(.72,.72);ctx.fillStyle='#0006';ctx.beginPath();ctx.roundRect(-13,-19,29,44,7);ctx.fill();
- ctx.fillStyle='#101316';for(const yy of[-13,10])for(const xx of[-13,10])ctx.fillRect(xx,yy,5,10);
- ctx.fillStyle=color;ctx.beginPath();ctx.roundRect(-9,-20,18,40,6);ctx.fill();ctx.fillStyle=isPlayer?'#fff1b5':'#e9edf0';ctx.beginPath();ctx.moveTo(-5,-15);ctx.lineTo(0,-25);ctx.lineTo(5,-15);ctx.fill();
- ctx.fillStyle='#20282e';ctx.fillRect(-13,-15,26,4);ctx.fillRect(-14,15,28,4);ctx.fillStyle='#15232b';ctx.beginPath();ctx.ellipse(0,-2,5,8,0,0,Math.PI*2);ctx.fill();ctx.restore()
+ ctx.save();ctx.translate(x,y);ctx.rotate(a+Math.PI/2);ctx.scale(.72,.72);
+ // Sombra e pneus.
+ ctx.fillStyle='#0007';ctx.beginPath();ctx.ellipse(0,1,17,27,0,0,Math.PI*2);ctx.fill();
+ ctx.fillStyle='#101316';
+ for(const yy of[-17,12])for(const xx of[-14,10]){
+  ctx.beginPath();ctx.roundRect(xx,yy,5,11,2);ctx.fill()
+ }
+ // Asas dianteira e traseira.
+ ctx.fillStyle='#171b1e';ctx.beginPath();ctx.roundRect(-15,-24,30,5,2);ctx.fill();
+ ctx.beginPath();ctx.roundRect(-16,18,32,5,2);ctx.fill();
+ // Chassi de monoposto.
+ ctx.fillStyle=color;ctx.beginPath();
+ ctx.moveTo(-7,19);ctx.lineTo(-9,8);ctx.lineTo(-7,-12);ctx.lineTo(-4,-22);
+ ctx.lineTo(0,-27);ctx.lineTo(4,-22);ctx.lineTo(7,-12);ctx.lineTo(9,8);ctx.lineTo(7,19);
+ ctx.quadraticCurveTo(0,23,-7,19);ctx.fill();
+ // Cockpit e halo.
+ ctx.fillStyle='#18242c';ctx.beginPath();ctx.ellipse(0,-3,4.8,8,0,0,Math.PI*2);ctx.fill();
+ ctx.strokeStyle='#dce5e8';ctx.lineWidth=1.8;ctx.beginPath();ctx.arc(0,-4,6,Math.PI*1.05,Math.PI*1.95);ctx.stroke();
+ // Detalhes de nariz, número e luzes.
+ ctx.fillStyle=isPlayer?'#fff0b0':'#f4f4ef';ctx.beginPath();ctx.moveTo(-2,-20);ctx.lineTo(0,-27);ctx.lineTo(2,-20);ctx.fill();
+ ctx.fillStyle='#ffffff';ctx.font='bold 7px system-ui';ctx.textAlign='center';ctx.fillText(isPlayer?'1':'',0,13);
+ ctx.fillStyle='#ffdf8a';ctx.fillRect(-5,-22,3,2);ctx.fillRect(2,-22,3,2);
+ ctx.restore()
 }
 function draw(){drawTrack();bots.forEach(b=>drawCar(b.x,b.y,b.angle,b.color));drawCar(player.x,player.y,player.angle,player.color,true)}
 function update(dt){
