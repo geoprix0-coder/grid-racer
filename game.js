@@ -24,12 +24,61 @@ function trackRadius(x,y){
  return Math.pow(Math.pow(Math.abs((x-cx)/rx),4)+Math.pow(Math.abs((y-cy)/ry),4),.25)
 }
 function progressAt(x,y){const a=Math.atan2((y-cy)/ry,(x-cx)/rx);return(a+Math.PI/2+Math.PI*2)%(Math.PI*2)}
+function drawGrandstand(x,y,w,h,label){
+ ctx.save();
+ ctx.fillStyle='#0005';ctx.beginPath();ctx.roundRect(x+4,y+4,w,h,5);ctx.fill();
+ ctx.fillStyle='#303b42';ctx.beginPath();ctx.roundRect(x,y,w,h,5);ctx.fill();
+ ctx.fillStyle='#68747a';ctx.fillRect(x+5,y+4,w-10,5);
+ // Fileiras de espectadores estilizadas.
+ const colors=['#e9bd54','#d95c4e','#d9e2e4','#5e9ec0','#8a79b7'];
+ for(let row=0;row<3;row++)for(let col=0;col<Math.floor((w-18)/9);col++){
+  ctx.fillStyle=colors[(row*3+col)%colors.length];
+  ctx.beginPath();ctx.arc(x+10+col*9,y+14+row*7,2.2,0,Math.PI*2);ctx.fill()
+ }
+ ctx.fillStyle='#111a20';ctx.fillRect(x+5,y+h-6,w-10,4);
+ ctx.fillStyle='#f1f3ed';ctx.font='bold 7px system-ui';ctx.textAlign='right';ctx.fillText(label,x+w-8,y+h-8);
+ ctx.restore()
+}
+function drawFacilities(){
+ // Arquibancadas em áreas externas, sem invadir o asfalto.
+ drawGrandstand(112,12,196,39,'GRANDSTAND A');
+ drawGrandstand(650,549,198,39,'GRANDSTAND B');
+ // Pit lane no infield.
+ ctx.save();
+ ctx.fillStyle='#0005';ctx.fillRect(510,151,307,27);
+ ctx.fillStyle='#343b40';ctx.fillRect(507,147,307,25);
+ ctx.strokeStyle='#f0eee5';ctx.lineWidth=2;ctx.strokeRect(507,147,307,25);
+ ctx.setLineDash([12,9]);ctx.strokeStyle='#d9d9d1';ctx.lineWidth=1;
+ ctx.beginPath();ctx.moveTo(514,159);ctx.lineTo(807,159);ctx.stroke();ctx.setLineDash([]);
+ ctx.fillStyle='#f5f5ed';ctx.font='bold 9px system-ui';ctx.textAlign='center';ctx.fillText('PIT LANE',660,143);
+ // Boxes e portas das equipes.
+ ctx.fillStyle='#202b32';ctx.beginPath();ctx.roundRect(566,187,244,45,4);ctx.fill();
+ ctx.fillStyle='#69747a';ctx.fillRect(566,187,244,5);
+ const teamColors=['#e84d4d','#47a5ed','#b78be8','#f3b72f','#55b98a','#e58d49'];
+ for(let i=0;i<6;i++){
+  const x=573+i*39;
+  ctx.fillStyle='#111a20';ctx.fillRect(x,197,34,27);
+  ctx.fillStyle=teamColors[i];ctx.fillRect(x+3,200,28,3);
+  ctx.fillStyle='#89969b';ctx.fillRect(x+4,207,26,14);
+  ctx.fillStyle='#26343c';ctx.fillRect(x+7,210,20,11);
+  ctx.fillStyle='#f4f2e9';ctx.font='bold 7px system-ui';ctx.textAlign='center';ctx.fillText('0'+(i+1),x+17,194)
+ }
+ ctx.fillStyle='#e9edf0';ctx.font='bold 8px system-ui';ctx.textAlign='left';ctx.fillText('TEAM GARAGES',573,242);
+ // Torre de controle compacta.
+ ctx.fillStyle='#0005';ctx.fillRect(485,188,48,38);
+ ctx.fillStyle='#39464d';ctx.fillRect(481,184,48,37);
+ ctx.fillStyle='#8fa2a9';ctx.fillRect(485,188,40,9);
+ ctx.fillStyle='#1a2a34';ctx.fillRect(487,201,36,17);
+ ctx.fillStyle='#f2bd3e';ctx.fillRect(481,181,48,4);
+ ctx.restore()
+}
 function drawTrack(){
  // Área externa e escape de pista.
  ctx.fillStyle='#24563b';ctx.fillRect(0,0,W,H);
  ctx.globalAlpha=.13;ctx.strokeStyle='#a5c98c';ctx.lineWidth=2;
  for(let x=-80;x<W+100;x+=34){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x+130,H);ctx.stroke()}
  ctx.globalAlpha=1;
+ drawFacilities();
  traceTrack(rx+road/2+24,ry+road*.31+15);ctx.fillStyle='#8b8d83';ctx.fill();
  traceTrack(rx+road/2+8,ry+road*.31+5);ctx.fillStyle='#d8d5c8';ctx.fill();
  // Asfalto com contornos limpos.
