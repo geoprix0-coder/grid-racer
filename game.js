@@ -2,28 +2,44 @@
 const canvas=document.getElementById('game'),ctx=canvas.getContext('2d');
 const W=960,H=600,cx=480,cy=300,rx=330,ry=205,road=112,keys={};
 let running=false,finished=false,last=0,lap=1,lastProgress=0,position=4;
-const player={x:cx,y:cy-ry+road*.12,angle:0,speed:0,vx:0,vy:0,color:'#f3b72f'};
+const player={x:trackPoint(-Math.PI/2,-24).x,y:trackPoint(-Math.PI/2,-24).y,angle:Math.atan2(rawTrackPoint(-Math.PI/2+.01).y-rawTrackPoint(-Math.PI/2-.01).y,rawTrackPoint(-Math.PI/2+.01).x-rawTrackPoint(-Math.PI/2-.01).x),speed:0,vx:0,vy:0,color:'#f3b72f'};
 const bots=[{phase:-Math.PI/2+.10,lane:-24,preferredLane:-24,targetLane:-24,speed:5.8,angle:0,x:0,y:0,color:'#e84d4d'},{phase:-Math.PI/2+.25,lane:24,preferredLane:24,targetLane:24,speed:5.7,angle:0,x:0,y:0,color:'#47a5ed'},{phase:-Math.PI/2+.40,lane:0,preferredLane:0,targetLane:0,speed:5.6,angle:0,x:0,y:0,color:'#b78be8'}];
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 // Pista tipo autódromo: duas retas longas e curvas largas.
-const trackPoint=(a,l=0)=>({
- x:cx+(rx+l)*Math.sign(Math.cos(a))*Math.sqrt(Math.abs(Math.cos(a))),
- y:cy+(ry+l*.62)*Math.sign(Math.sin(a))*Math.sqrt(Math.abs(Math.sin(a)))
-});
-function traceTrack(aRadius,bRadius){
+// Novo traçado: circuito assimétrico com reta principal, curva rápida,
+ // cotovelo técnico e uma sequência de curvas em raio variável.
+function rawTrackPoint(a){
+ return {
+  x:cx+285*Math.cos(a)+38*Math.cos(2*a+.48)+18*Math.sin(3*a),
+  y:cy+170*Math.sin(a)+28*Math.sin(2*a-.68)+16*Math.sin(3*a)
+ }
+}
+const trackPoint=(a,l=0)=>{
+ const p=rawTrackPoint(a),before=rawTrackPoint(a-.001),after=rawTrackPoint(a+.001);
+ const dx=after.x-before.x,dy=after.y-before.y,len=Math.hypot(dx,dy)||1;
+ return {x:p.x-dy/len*l,y:p.y+dx/len*l}
+};
+function traceTrack(offset){
  ctx.beginPath();
- for(let i=0;i<=240;i++){
-  const a=-Math.PI/2+i/240*Math.PI*2;
-  const x=cx+aRadius*Math.sign(Math.cos(a))*Math.sqrt(Math.abs(Math.cos(a)));
-  const y=cy+bRadius*Math.sign(Math.sin(a))*Math.sqrt(Math.abs(Math.sin(a)));
-  if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y)
+ for(let i=0;i<=360;i++){
+  const p=trackPoint(-Math.PI/2+i/360*Math.PI*2,offset);
+  if(i===0)ctx.moveTo(p.x,p.y);else ctx.lineTo(p.x,p.y)
  }
  ctx.closePath()
 }
-function trackRadius(x,y){
- return Math.pow(Math.pow(Math.abs((x-cx)/rx),4)+Math.pow(Math.abs((y-cy)/ry),4),.25)
+function nearestTrack(x,y){
+ let best={distance:Infinity,phase:0,side:0};
+ for(let i=0;i<360;i++){
+  const a=-Math.PI/2+i/360*Math.PI*2,p=rawTrackPoint(a);
+  const before=rawTrackPoint(a-.004),after=rawTrackPoint(a+.004);
+  const dx=after.x-before.x,dy=after.y-before.y,len=Math.hypot(dx,dy)||1;
+  const vx=x-p.x,vy=y-p.y,distance=Math.hypot(vx,vy);
+  if(distance<best.distance)best={distance,phase:(a+Math.PI*2)%(Math.PI*2),side:(dx*vy-dy*vx)/len}
+ }
+ return best
 }
-function progressAt(x,y){const a=Math.atan2((y-cy)/ry,(x-cx)/rx);return(a+Math.PI/2+Math.PI*2)%(Math.PI*2)}
+function trackRadius(x,y){return 1+nearestTrack(x,y).side/(road/2)}
+function progressAt(x,y){return nearestTrack(x,y).phase}
 function drawGrandstand(x,y,w,h,label){
  ctx.save();
  ctx.fillStyle='#0005';ctx.beginPath();ctx.roundRect(x+4,y+4,w,h,5);ctx.fill();
@@ -79,18 +95,18 @@ function drawTrack(){
  for(let x=-80;x<W+100;x+=34){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x+130,H);ctx.stroke()}
  ctx.globalAlpha=1;
  drawFacilities();
- traceTrack(rx+road/2+24,ry+road*.31+15);ctx.fillStyle='#8b8d83';ctx.fill();
- traceTrack(rx+road/2+8,ry+road*.31+5);ctx.fillStyle='#d8d5c8';ctx.fill();
+ traceTrack(road/2+24);ctx.fillStyle='#8b8d83';ctx.fill();
+ traceTrack(road/2+8);ctx.fillStyle='#d8d5c8';ctx.fill();
  // Asfalto com contornos limpos.
- traceTrack(rx+road/2,ry+road*.31);ctx.fillStyle='#454b50';ctx.fill();
- traceTrack(rx-road/2,ry-road*.31);ctx.fillStyle='#24563b';ctx.fill();
+ traceTrack(road/2);ctx.fillStyle='#454b50';ctx.fill();
+ traceTrack(-road/2);ctx.fillStyle='#24563b';ctx.fill();
  const asphalt=ctx.createLinearGradient(0,70,0,530);
  asphalt.addColorStop(0,'#555b60');asphalt.addColorStop(.5,'#41474c');asphalt.addColorStop(1,'#555b60');
- traceTrack(rx+road/2,ry+road*.31);ctx.fillStyle=asphalt;ctx.fill();
+ traceTrack(road/2);ctx.fillStyle=asphalt;ctx.fill();
  // Bordas e zebras alternadas.
  ctx.lineWidth=3;ctx.strokeStyle='#f4f1e8';
- traceTrack(rx+road/2,ry+road*.31);ctx.stroke();
- traceTrack(rx-road/2,ry-road*.31);ctx.stroke();
+ traceTrack(road/2);ctx.stroke();
+ traceTrack(-road/2);ctx.stroke();
  for(let a=0;a<Math.PI*2;a+=.045){
   const p=trackPoint(a,road/2-2),q=trackPoint(a+.025,road/2-2);
   ctx.strokeStyle=(Math.floor(a/.045)%2)?'#f4f4ee':'#e34b40';ctx.lineWidth=8;
@@ -100,11 +116,14 @@ function drawTrack(){
  }
  // Linha tracejada central e linha de largada.
  ctx.setLineDash([17,19]);ctx.strokeStyle='#d9d9d2';ctx.lineWidth=2;
- traceTrack(rx,ry);ctx.stroke();ctx.setLineDash([]);
- const sx=cx,sy=cy-ry-road*.31;
+ traceTrack(0);ctx.stroke();ctx.setLineDash([]);
+ const edgeA=trackPoint(-Math.PI/2,-road/2),edgeB=trackPoint(-Math.PI/2,road/2);
+ const startAngle=Math.atan2(edgeB.y-edgeA.y,edgeB.x-edgeA.x);
+ ctx.save();ctx.translate((edgeA.x+edgeB.x)/2,(edgeA.y+edgeB.y)/2);ctx.rotate(startAngle);
  for(let i=0;i<8;i++)for(let j=0;j<2;j++){
-  ctx.fillStyle=(i+j)%2?'#151719':'#f6f6ef';ctx.fillRect(sx-9+j*9,sy+i*5,9,5)
+  ctx.fillStyle=(i+j)%2?'#151719':'#f6f6ef';ctx.fillRect(-road/2+i*road/8,-5+j*5,road/8,5)
  }
+ ctx.restore();
  ctx.fillStyle='#ffffffb8';ctx.font='800 12px system-ui';ctx.fillText('GRID RACE CIRCUIT',cx+125,cy-ry-9);
 }
 function drawCar(x,y,a,color,isPlayer=false){
@@ -223,7 +242,7 @@ function update(dt){
 }
 function frame(ts){if(!running)return;if(!last)last=ts;const dt=ts-last;last=ts;update(dt);draw();if(running)requestAnimationFrame(frame)}
 function showOverlay(title,msg){document.getElementById('modalTitle').textContent=title;document.getElementById('modalText').textContent=msg;document.getElementById('start').textContent=finished?'CORRER NOVAMENTE':title==='Corrida pausada'?'CONTINUAR':'INICIAR CORRIDA';document.getElementById('overlay').style.display='flex'}
-function reset(){player.x=cx;player.y=cy-ry+road*.12;player.angle=0;player.speed=0;player.vx=0;player.vy=0;bots.forEach((b,i)=>{b.phase=-Math.PI/2+[.10,.25,.40][i];b.lane=b.preferredLane;b.targetLane=b.preferredLane;b.speed=5.8-i*.1;b.angle=0;const p=trackPoint(b.phase,b.lane);b.x=p.x;b.y=p.y});lap=1;lastProgress=0;position=4;finished=false;document.getElementById('lap').textContent='1';document.getElementById('position').textContent='4';document.getElementById('speed').textContent='0'}
+function reset(){const start=trackPoint(-Math.PI/2,-24),ahead=rawTrackPoint(-Math.PI/2+.01),behind=rawTrackPoint(-Math.PI/2-.01);player.x=start.x;player.y=start.y;player.angle=Math.atan2(ahead.y-behind.y,ahead.x-behind.x);player.speed=0;player.vx=0;player.vy=0;bots.forEach((b,i)=>{b.phase=-Math.PI/2+[.10,.25,.40][i];b.lane=b.preferredLane;b.targetLane=b.preferredLane;b.speed=5.8-i*.1;b.angle=0;const p=trackPoint(b.phase,b.lane);b.x=p.x;b.y=p.y});lap=1;lastProgress=0;position=4;finished=false;document.getElementById('lap').textContent='1';document.getElementById('position').textContent='4';document.getElementById('speed').textContent='0'}
 document.getElementById('start').addEventListener('click',()=>{if(finished)reset();running=true;last=0;document.getElementById('overlay').style.display='none';requestAnimationFrame(frame)});
 window.addEventListener('keydown',e=>{if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key))e.preventDefault();keys[e.key]=true;if(e.key==='Escape'&&running){running=false;showOverlay('Corrida pausada','Quando estiver pronto, retome a corrida.')}});
 window.addEventListener('keyup',e=>keys[e.key]=false);bots.forEach(b=>{const p=trackPoint(b.phase,b.lane);b.x=p.x;b.y=p.y});draw()
