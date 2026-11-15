@@ -51,7 +51,7 @@ function drawTrack(){
  ctx.fillText('SENTIDO DA CORRIDA',cx+125,cy-ry-5)
 }
 function drawCar(x,y,a,color,isPlayer=false){
- ctx.save();ctx.translate(x,y);ctx.rotate(a+Math.PI/2);ctx.fillStyle='#0006';ctx.beginPath();ctx.roundRect(-13,-19,29,44,7);ctx.fill();
+ ctx.save();ctx.translate(x,y);ctx.rotate(a+Math.PI/2);ctx.scale(.72,.72);ctx.fillStyle='#0006';ctx.beginPath();ctx.roundRect(-13,-19,29,44,7);ctx.fill();
  ctx.fillStyle='#101316';for(const yy of[-13,10])for(const xx of[-13,10])ctx.fillRect(xx,yy,5,10);
  ctx.fillStyle=color;ctx.beginPath();ctx.roundRect(-9,-20,18,40,6);ctx.fill();ctx.fillStyle=isPlayer?'#fff1b5':'#e9edf0';ctx.beginPath();ctx.moveTo(-5,-15);ctx.lineTo(0,-25);ctx.lineTo(5,-15);ctx.fill();
  ctx.fillStyle='#20282e';ctx.fillRect(-13,-15,26,4);ctx.fillRect(-14,15,28,4);ctx.fillStyle='#15232b';ctx.beginPath();ctx.ellipse(0,-2,5,8,0,0,Math.PI*2);ctx.fill();ctx.restore()
