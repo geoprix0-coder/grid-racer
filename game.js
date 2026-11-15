@@ -63,19 +63,19 @@ function update(dt){
  const brake=keys.ArrowDown||keys.s||keys.S;
  const steer=(keys.ArrowLeft||keys.a||keys.A?-1:0)+(keys.ArrowRight||keys.d||keys.D?1:0);
  let speed=Math.hypot(player.vx,player.vy)/2;
- // A direção ganha autoridade com a velocidade, mas continua previsível em baixa.
- player.angle+=steer*(.008+speed*.0032)*clamp(speed/1.4,0,1)*t;
- // Separa velocidade longitudinal e lateral para permitir uma derrapagem controlável.
+ // Direção mais arcade: resposta rápida e previsível, inclusive em curvas fechadas.
+ player.angle+=steer*(.014+speed*.0042)*clamp(speed/0.8,0,1)*t;
+ // Aderência elevada reduz a sensação de o carro escapar ao virar.
  let forward=player.vx*Math.cos(player.angle)+player.vy*Math.sin(player.angle);
  let lateral=-player.vx*Math.sin(player.angle)+player.vy*Math.cos(player.angle);
- if(throttle)forward+=.055*t;
- if(brake)forward=Math.max(0,forward-.14*t);
+ if(throttle)forward+=.075*t;
+ if(brake)forward=Math.max(0,forward-.16*t);
  const radial=trackRadius(player.x,player.y);
  const onTrack=radial>=.82&&radial<=1.18;
- lateral*=Math.pow(onTrack?.72:.88,t);
- forward*=Math.pow(onTrack?.998:.94,t);
+ lateral*=Math.pow(onTrack?.46:.68,t);
+ forward*=Math.pow(onTrack?.999:.97,t);
  forward=Math.max(0,forward);
- const maxSpeed=13;
+ const maxSpeed=10;
  let vx=Math.cos(player.angle)*forward-Math.sin(player.angle)*lateral;
  let vy=Math.sin(player.angle)*forward+Math.cos(player.angle)*lateral;
  const magnitude=Math.hypot(vx,vy);
@@ -83,7 +83,7 @@ function update(dt){
  player.vx=vx;player.vy=vy;player.speed=Math.hypot(vx,vy)/2;
  player.x+=player.vx*t;player.y+=player.vy*t;
  const newRadial=trackRadius(player.x,player.y);
- if(newRadial>1.22||newRadial<.78){player.vx*=Math.pow(.88,t);player.vy*=Math.pow(.88,t);player.speed=Math.hypot(player.vx,player.vy)/2}
+ if(newRadial>1.22||newRadial<.78){player.vx*=Math.pow(.94,t);player.vy*=Math.pow(.94,t);player.speed=Math.hypot(player.vx,player.vy)/2}
  player.x=clamp(player.x,-20,W+20);player.y=clamp(player.y,-20,H+20);
  bots.forEach(b=>b.phase+=b.speed*.0019*dt);
  const p=progressAt(player.x,player.y);
