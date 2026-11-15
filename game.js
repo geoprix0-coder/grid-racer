@@ -3,7 +3,7 @@ const canvas=document.getElementById('game'),ctx=canvas.getContext('2d');
 const W=960,H=600,cx=480,cy=300,rx=330,ry=205,road=112,keys={};
 let running=false,finished=false,last=0,lap=1,lastProgress=0,position=4;
 const player={x:cx,y:cy-ry+road*.12,angle:0,speed:0,vx:0,vy:0,color:'#f3b72f'};
-const bots=[{phase:-Math.PI/2+.10,lane:-16,preferredLane:-16,targetLane:-16,speed:1.52,color:'#e84d4d'},{phase:-Math.PI/2+.25,lane:14,preferredLane:14,targetLane:14,speed:1.46,color:'#47a5ed'},{phase:-Math.PI/2+.40,lane:0,preferredLane:0,targetLane:0,speed:1.40,color:'#b78be8'}];
+const bots=[{phase:-Math.PI/2+.10,lane:-24,preferredLane:-24,targetLane:-24,speed:5.8,angle:0,x:0,y:0,color:'#e84d4d'},{phase:-Math.PI/2+.25,lane:24,preferredLane:24,targetLane:24,speed:5.7,angle:0,x:0,y:0,color:'#47a5ed'},{phase:-Math.PI/2+.40,lane:0,preferredLane:0,targetLane:0,speed:5.6,angle:0,x:0,y:0,color:'#b78be8'}];
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 // Pista tipo autódromo: duas retas longas e curvas largas.
 const trackPoint=(a,l=0)=>({
@@ -56,7 +56,7 @@ function drawCar(x,y,a,color,isPlayer=false){
  ctx.fillStyle=color;ctx.beginPath();ctx.roundRect(-9,-20,18,40,6);ctx.fill();ctx.fillStyle=isPlayer?'#fff1b5':'#e9edf0';ctx.beginPath();ctx.moveTo(-5,-15);ctx.lineTo(0,-25);ctx.lineTo(5,-15);ctx.fill();
  ctx.fillStyle='#20282e';ctx.fillRect(-13,-15,26,4);ctx.fillRect(-14,15,28,4);ctx.fillStyle='#15232b';ctx.beginPath();ctx.ellipse(0,-2,5,8,0,0,Math.PI*2);ctx.fill();ctx.restore()
 }
-function draw(){drawTrack();bots.forEach(b=>{const p=trackPoint(b.phase,b.lane);drawCar(p.x,p.y,b.phase,b.color)});drawCar(player.x,player.y,player.angle,player.color,true)}
+function draw(){drawTrack();bots.forEach(b=>drawCar(b.x,b.y,b.angle,b.color));drawCar(player.x,player.y,player.angle,player.color,true)}
 function update(dt){
  const t=Math.min(dt/16.67,2.2);
  const throttle=keys.ArrowUp||keys.w||keys.W;
@@ -85,38 +85,41 @@ function update(dt){
  const newRadial=trackRadius(player.x,player.y);
  if(newRadial>1.22||newRadial<.78){player.vx*=Math.pow(.94,t);player.vy*=Math.pow(.94,t);player.speed=Math.hypot(player.vx,player.vy)/2}
  player.x=clamp(player.x,-20,W+20);player.y=clamp(player.y,-20,H+20);
- // IA: os adversários escolhem trajetórias para evitar o jogador e disputam espaço.
+ // IA de pilotagem: cada adversário segue a pista com direção, aceleração e frenagem próprias.
  bots.forEach((b,index)=>{
+  const nearby=[{x:player.x,y:player.y}];
+  bots.forEach((other,j)=>{if(j!==index)nearby.push({x:other.x,y:other.y})});
   const current=trackPoint(b.phase,b.lane);
-  const distanceToPlayer=Math.hypot(current.x-player.x,current.y-player.y);
   let chosenLane=b.preferredLane;
-  if(distanceToPlayer<115){
-   const lanes=[-30,0,30];
-   let bestScore=-Infinity;
-   lanes.forEach(candidate=>{
-    const point=trackPoint(b.phase,candidate);
-    const playerDistance=Math.hypot(point.x-player.x,point.y-player.y);
-    let trafficDistance=150;
-    bots.forEach((other,j)=>{
-     if(j===index)return;
-     const op=trackPoint(other.phase,other.lane);
-     trafficDistance=Math.min(trafficDistance,Math.hypot(point.x-op.x,point.y-op.y));
-    });
-    const laneChangeCost=Math.abs(candidate-b.lane)*.35;
-    const score=Math.min(playerDistance,150)*1.2+Math.min(trafficDistance,100)*.45-laneChangeCost;
-    if(score>bestScore){bestScore=score;chosenLane=candidate}
-   });
-  }
-  b.targetLane=chosenLane;
-  b.lane+=(b.targetLane-b.lane)*Math.min(.10*t,1);
-  // Pequenas variações de ritmo tornam cada adversário menos previsível.
-  const pace=1+Math.sin(b.phase*2+index)*.035;
-  b.phase+=b.speed*pace*.0019*dt;
+  let bestScore=-Infinity;
+  [-34,0,34].forEach(candidate=>{
+   const probe=trackPoint(b.phase+.12,candidate);
+   let clearance=180;
+   nearby.forEach(car=>clearance=Math.min(clearance,Math.hypot(probe.x-car.x,probe.y-car.y)));
+   const score=Math.min(clearance,180)-Math.abs(candidate-b.lane)*.30-Math.abs(candidate-b.preferredLane)*.12;
+   if(score>bestScore){bestScore=score;chosenLane=candidate}
+  });
+  // Só muda de faixa quando há tráfego próximo; depois retorna gradualmente à linha preferida.
+  const closeTraffic=nearby.some(car=>Math.hypot(current.x-car.x,current.y-car.y)<105);
+  b.targetLane=closeTraffic?chosenLane:b.preferredLane;
+  b.lane+=(b.targetLane-b.lane)*Math.min(.055*t,1);
+  const target=trackPoint(b.phase+.20,b.lane);
+  const desiredAngle=Math.atan2(target.y-b.y,target.x-b.x);
+  const angleError=Math.atan2(Math.sin(desiredAngle-b.angle),Math.cos(desiredAngle-b.angle));
+  b.angle+=clamp(angleError,-.065*t,.065*t);
+  const ahead=trackPoint(b.phase+.34,b.lane);
+  const nextAngle=Math.atan2(ahead.y-target.y,ahead.x-target.x);
+  const bend=Math.abs(Math.atan2(Math.sin(nextAngle-b.angle),Math.cos(nextAngle-b.angle)));
+  const targetSpeed=clamp(7.5-bend*2.8,5.2,7.5);
+  b.speed+=clamp(targetSpeed-b.speed,-.10*t,.045*t);
+  b.x+=Math.cos(b.angle)*b.speed*t;
+  b.y+=Math.sin(b.angle)*b.speed*t;
+  // O marcador de progresso acompanha a velocidade real aproximada do carro.
+  b.phase+=b.speed*t/280;
  });
  // Colisão simples: o carro do jogador não atravessa os adversários.
  bots.forEach(b=>{
-  const opponent=trackPoint(b.phase,b.lane);
-  let dx=player.x-opponent.x,dy=player.y-opponent.y;
+  let dx=player.x-b.x,dy=player.y-b.y;
   let distance=Math.hypot(dx,dy);
   const contactDistance=25;
   if(distance<contactDistance){
@@ -144,8 +147,8 @@ function update(dt){
 }
 function frame(ts){if(!running)return;if(!last)last=ts;const dt=ts-last;last=ts;update(dt);draw();if(running)requestAnimationFrame(frame)}
 function showOverlay(title,msg){document.getElementById('modalTitle').textContent=title;document.getElementById('modalText').textContent=msg;document.getElementById('start').textContent=finished?'CORRER NOVAMENTE':title==='Corrida pausada'?'CONTINUAR':'INICIAR CORRIDA';document.getElementById('overlay').style.display='flex'}
-function reset(){player.x=cx;player.y=cy-ry+road*.12;player.angle=0;player.speed=0;player.vx=0;player.vy=0;bots[0].phase=-Math.PI/2+.10;bots[1].phase=-Math.PI/2+.25;bots[2].phase=-Math.PI/2+.40;lap=1;lastProgress=0;position=4;finished=false;document.getElementById('lap').textContent='1';document.getElementById('position').textContent='4';document.getElementById('speed').textContent='0'}
+function reset(){player.x=cx;player.y=cy-ry+road*.12;player.angle=0;player.speed=0;player.vx=0;player.vy=0;bots.forEach((b,i)=>{b.phase=-Math.PI/2+[.10,.25,.40][i];b.lane=b.preferredLane;b.targetLane=b.preferredLane;b.speed=5.8-i*.1;b.angle=0;const p=trackPoint(b.phase,b.lane);b.x=p.x;b.y=p.y});lap=1;lastProgress=0;position=4;finished=false;document.getElementById('lap').textContent='1';document.getElementById('position').textContent='4';document.getElementById('speed').textContent='0'}
 document.getElementById('start').addEventListener('click',()=>{if(finished)reset();running=true;last=0;document.getElementById('overlay').style.display='none';requestAnimationFrame(frame)});
 window.addEventListener('keydown',e=>{if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key))e.preventDefault();keys[e.key]=true;if(e.key==='Escape'&&running){running=false;showOverlay('Corrida pausada','Quando estiver pronto, retome a corrida.')}});
-window.addEventListener('keyup',e=>keys[e.key]=false);draw()
+window.addEventListener('keyup',e=>keys[e.key]=false);bots.forEach(b=>{const p=trackPoint(b.phase,b.lane);b.x=p.x;b.y=p.y});draw()
 })();
