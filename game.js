@@ -3,7 +3,7 @@ const canvas=document.getElementById('game'),ctx=canvas.getContext('2d');
 const W=960,H=600,cx=480,cy=300,rx=330,ry=205,road=112,keys={};
 let running=false,finished=false,last=0,lap=1,lastProgress=0,position=4;
 const player={x:cx,y:cy-ry+road*.12,angle:0,speed:0,vx:0,vy:0,color:'#f3b72f'};
-const bots=[{phase:-Math.PI/2+.10,lane:-16,speed:1.52,color:'#e84d4d'},{phase:-Math.PI/2+.25,lane:14,speed:1.46,color:'#47a5ed'},{phase:-Math.PI/2+.40,lane:0,speed:1.40,color:'#b78be8'}];
+const bots=[{phase:-Math.PI/2+.10,lane:-16,preferredLane:-16,targetLane:-16,speed:1.52,color:'#e84d4d'},{phase:-Math.PI/2+.25,lane:14,preferredLane:14,targetLane:14,speed:1.46,color:'#47a5ed'},{phase:-Math.PI/2+.40,lane:0,preferredLane:0,targetLane:0,speed:1.40,color:'#b78be8'}];
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 // Pista tipo autódromo: duas retas longas e curvas largas.
 const trackPoint=(a,l=0)=>({
@@ -85,7 +85,34 @@ function update(dt){
  const newRadial=trackRadius(player.x,player.y);
  if(newRadial>1.22||newRadial<.78){player.vx*=Math.pow(.94,t);player.vy*=Math.pow(.94,t);player.speed=Math.hypot(player.vx,player.vy)/2}
  player.x=clamp(player.x,-20,W+20);player.y=clamp(player.y,-20,H+20);
- bots.forEach(b=>b.phase+=b.speed*.0019*dt);
+ // IA: os adversários escolhem trajetórias para evitar o jogador e disputam espaço.
+ bots.forEach((b,index)=>{
+  const current=trackPoint(b.phase,b.lane);
+  const distanceToPlayer=Math.hypot(current.x-player.x,current.y-player.y);
+  let chosenLane=b.preferredLane;
+  if(distanceToPlayer<115){
+   const lanes=[-30,0,30];
+   let bestScore=-Infinity;
+   lanes.forEach(candidate=>{
+    const point=trackPoint(b.phase,candidate);
+    const playerDistance=Math.hypot(point.x-player.x,point.y-player.y);
+    let trafficDistance=150;
+    bots.forEach((other,j)=>{
+     if(j===index)return;
+     const op=trackPoint(other.phase,other.lane);
+     trafficDistance=Math.min(trafficDistance,Math.hypot(point.x-op.x,point.y-op.y));
+    });
+    const laneChangeCost=Math.abs(candidate-b.lane)*.35;
+    const score=Math.min(playerDistance,150)*1.2+Math.min(trafficDistance,100)*.45-laneChangeCost;
+    if(score>bestScore){bestScore=score;chosenLane=candidate}
+   });
+  }
+  b.targetLane=chosenLane;
+  b.lane+=(b.targetLane-b.lane)*Math.min(.10*t,1);
+  // Pequenas variações de ritmo tornam cada adversário menos previsível.
+  const pace=1+Math.sin(b.phase*2+index)*.035;
+  b.phase+=b.speed*pace*.0019*dt;
+ });
  // Colisão simples: o carro do jogador não atravessa os adversários.
  bots.forEach(b=>{
   const opponent=trackPoint(b.phase,b.lane);
