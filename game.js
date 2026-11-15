@@ -2,7 +2,7 @@
 const canvas=document.getElementById('game'),ctx=canvas.getContext('2d');
 const W=960,H=600,cx=480,cy=300,rx=330,ry=205,road=112,keys={};
 let running=false,finished=false,last=0,lap=1,lastProgress=0,position=4;
-const player={x:trackPoint(-Math.PI/2,-24).x,y:trackPoint(-Math.PI/2,-24).y,angle:Math.atan2(rawTrackPoint(-Math.PI/2+.01).y-rawTrackPoint(-Math.PI/2-.01).y,rawTrackPoint(-Math.PI/2+.01).x-rawTrackPoint(-Math.PI/2-.01).x),speed:0,vx:0,vy:0,color:'#f3b72f'};
+const player={x:0,y:0,angle:0,speed:0,vx:0,vy:0,color:'#f3b72f'};
 const bots=[{phase:-Math.PI/2+.10,lane:-24,preferredLane:-24,targetLane:-24,speed:5.8,angle:0,x:0,y:0,color:'#e84d4d'},{phase:-Math.PI/2+.25,lane:24,preferredLane:24,targetLane:24,speed:5.7,angle:0,x:0,y:0,color:'#47a5ed'},{phase:-Math.PI/2+.40,lane:0,preferredLane:0,targetLane:0,speed:5.6,angle:0,x:0,y:0,color:'#b78be8'}];
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 // Pista tipo autódromo: duas retas longas e curvas largas.
@@ -40,6 +40,13 @@ function nearestTrack(x,y){
 }
 function trackRadius(x,y){return 1+nearestTrack(x,y).side/(road/2)}
 function progressAt(x,y){return nearestTrack(x,y).phase}
+ // Posiciona o jogador somente depois de definir a geometria do circuito.
+const initialPlayerPoint=trackPoint(-Math.PI/2,-24);
+const initialPlayerAhead=rawTrackPoint(-Math.PI/2+.01);
+const initialPlayerBehind=rawTrackPoint(-Math.PI/2-.01);
+player.x=initialPlayerPoint.x;
+player.y=initialPlayerPoint.y;
+player.angle=Math.atan2(initialPlayerAhead.y-initialPlayerBehind.y,initialPlayerAhead.x-initialPlayerBehind.x);
 function drawGrandstand(x,y,w,h,label){
  ctx.save();
  ctx.fillStyle='#0005';ctx.beginPath();ctx.roundRect(x+4,y+4,w,h,5);ctx.fill();
