@@ -2,7 +2,7 @@
 const canvas=document.getElementById('game'),ctx=canvas.getContext('2d');
 const W=960,H=600,cx=480,cy=300,rx=330,ry=205,road=76,keys={};
 let running=false,finished=false,last=0,lap=1,lastProgress=0,position=4;
-const player={x:cx,y:cy-ry+road*.30,angle:0,speed:0,color:'#f3b72f'};
+const player={x:cx,y:cy-ry+road*.30,angle:0,speed:0,vx:0,vy:0,color:'#f3b72f'};
 const bots=[{phase:-Math.PI/2+.10,lane:-16,speed:1.52,color:'#e84d4d'},{phase:-Math.PI/2+.25,lane:14,speed:1.46,color:'#47a5ed'},{phase:-Math.PI/2+.40,lane:0,speed:1.40,color:'#b78be8'}];
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const trackPoint=(a,l=0)=>({x:cx+(rx+l)*Math.cos(a),y:cy+(ry+l*.62)*Math.sin(a)});
@@ -27,21 +27,48 @@ function drawCar(x,y,a,color,isPlayer=false){
 function draw(){drawTrack();bots.forEach(b=>{const p=trackPoint(b.phase,b.lane);drawCar(p.x,p.y,b.phase,b.color)});drawCar(player.x,player.y,player.angle,player.color,true)}
 function update(dt){
  const t=Math.min(dt/16.67,2.2);
- if(keys.ArrowUp||keys.w||keys.W)player.speed+=.105*t;else player.speed-=.018*t;
- if(keys.ArrowDown||keys.s||keys.S)player.speed-=.17*t;player.speed=clamp(player.speed,0,6.5);
+ const throttle=keys.ArrowUp||keys.w||keys.W;
+ const brake=keys.ArrowDown||keys.s||keys.S;
  const steer=(keys.ArrowLeft||keys.a||keys.A?-1:0)+(keys.ArrowRight||keys.d||keys.D?1:0);
- player.angle+=steer*(.012+player.speed*.004)*Math.min(1,player.speed/1.1)*t;
- player.x+=Math.cos(player.angle)*player.speed*2*t;player.y+=Math.sin(player.angle)*player.speed*2*t;
- const radial=Math.sqrt(((player.x-cx)/rx)**2+((player.y-cy)/ry)**2);if(radial>1.18||radial<.82)player.speed*=Math.pow(.90,t);
- player.x=clamp(player.x,-20,W+20);player.y=clamp(player.y,-20,H+20);bots.forEach(b=>b.phase+=b.speed*.0019*dt);
+ let speed=Math.hypot(player.vx,player.vy)/2;
+ // A direção ganha autoridade com a velocidade, mas continua previsível em baixa.
+ player.angle+=steer*(.008+speed*.0032)*clamp(speed/1.4,0,1)*t;
+ // Separa velocidade longitudinal e lateral para permitir uma derrapagem controlável.
+ let forward=player.vx*Math.cos(player.angle)+player.vy*Math.sin(player.angle);
+ let lateral=-player.vx*Math.sin(player.angle)+player.vy*Math.cos(player.angle);
+ if(throttle)forward+=.055*t;
+ if(brake)forward=Math.max(0,forward-.14*t);
+ const radial=Math.sqrt(((player.x-cx)/rx)**2+((player.y-cy)/ry)**2);
+ const onTrack=radial>=.82&&radial<=1.18;
+ lateral*=Math.pow(onTrack?.72:.88,t);
+ forward*=Math.pow(onTrack?.998:.94,t);
+ forward=Math.max(0,forward);
+ const maxSpeed=13;
+ let vx=Math.cos(player.angle)*forward-Math.sin(player.angle)*lateral;
+ let vy=Math.sin(player.angle)*forward+Math.cos(player.angle)*lateral;
+ const magnitude=Math.hypot(vx,vy);
+ if(magnitude>maxSpeed){vx*=maxSpeed/magnitude;vy*=maxSpeed/magnitude}
+ player.vx=vx;player.vy=vy;player.speed=Math.hypot(vx,vy)/2;
+ player.x+=player.vx*t;player.y+=player.vy*t;
+ const newRadial=Math.sqrt(((player.x-cx)/rx)**2+((player.y-cy)/ry)**2);
+ if(newRadial>1.22||newRadial<.78){player.vx*=Math.pow(.88,t);player.vy*=Math.pow(.88,t);player.speed=Math.hypot(player.vx,player.vy)/2}
+ player.x=clamp(player.x,-20,W+20);player.y=clamp(player.y,-20,H+20);
+ bots.forEach(b=>b.phase+=b.speed*.0019*dt);
  const p=progressAt(player.x,player.y);
- if(lastProgress>6.05&&p<.22&&radial>.82&&radial<1.18&&player.speed>1.1){lap++;if(lap>3){lap=3;finished=true;running=false;showOverlay('Bandeirada!','Você completou a corrida. Posição final: '+position+'º lugar.')}document.getElementById('lap').textContent=lap}
- lastProgress=p;const bp=bots.map(b=>(b.phase+Math.PI/2+Math.PI*2)%(Math.PI*2));position=1+bp.filter(v=>v>p).length;
- document.getElementById('position').textContent=clamp(position,1,4);document.getElementById('speed').textContent=Math.round(player.speed*48)
+ if(lastProgress>6.05&&p<.22&&newRadial>.82&&newRadial<1.18&&player.speed>1.1){
+  lap++;
+  if(lap>3){lap=3;finished=true;running=false;showOverlay('Bandeirada!','Você completou a corrida. Posição final: '+position+'º lugar.')}
+  document.getElementById('lap').textContent=lap
+ }
+ lastProgress=p;
+ const bp=bots.map(b=>(b.phase+Math.PI/2+Math.PI*2)%(Math.PI*2));
+ position=1+bp.filter(v=>v>p).length;
+ document.getElementById('position').textContent=clamp(position,1,4);
+ document.getElementById('speed').textContent=Math.round(player.speed*48)
 }
 function frame(ts){if(!running)return;if(!last)last=ts;const dt=ts-last;last=ts;update(dt);draw();if(running)requestAnimationFrame(frame)}
 function showOverlay(title,msg){document.getElementById('modalTitle').textContent=title;document.getElementById('modalText').textContent=msg;document.getElementById('start').textContent=finished?'CORRER NOVAMENTE':title==='Corrida pausada'?'CONTINUAR':'INICIAR CORRIDA';document.getElementById('overlay').style.display='flex'}
-function reset(){player.x=cx;player.y=cy-ry+road*.30;player.angle=0;player.speed=0;bots[0].phase=-Math.PI/2+.10;bots[1].phase=-Math.PI/2+.25;bots[2].phase=-Math.PI/2+.40;lap=1;lastProgress=0;position=4;finished=false;document.getElementById('lap').textContent='1';document.getElementById('position').textContent='4';document.getElementById('speed').textContent='0'}
+function reset(){player.x=cx;player.y=cy-ry+road*.30;player.angle=0;player.speed=0;player.vx=0;player.vy=0;bots[0].phase=-Math.PI/2+.10;bots[1].phase=-Math.PI/2+.25;bots[2].phase=-Math.PI/2+.40;lap=1;lastProgress=0;position=4;finished=false;document.getElementById('lap').textContent='1';document.getElementById('position').textContent='4';document.getElementById('speed').textContent='0'}
 document.getElementById('start').addEventListener('click',()=>{if(finished)reset();running=true;last=0;document.getElementById('overlay').style.display='none';requestAnimationFrame(frame)});
 window.addEventListener('keydown',e=>{if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key))e.preventDefault();keys[e.key]=true;if(e.key==='Escape'&&running){running=false;showOverlay('Corrida pausada','Quando estiver pronto, retome a corrida.')}});
 window.addEventListener('keyup',e=>keys[e.key]=false);draw()
